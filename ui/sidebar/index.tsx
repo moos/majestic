@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Fragment } from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { useMutation, useQuery } from "react-apollo-hooks";
 import { space, color } from "styled-system";
@@ -11,6 +11,7 @@ import { transform, filterFailure } from "./transformer";
 import Summary from "./summary";
 import { Summary as SummaryType } from "../../server/api/workspace/summary";
 import RUN from "./run.gql";
+import useKeys, { hasKeys } from "../hooks/use-keys";
 import {
   Play,
   Eye,
@@ -19,7 +20,9 @@ import {
   ZapOff,
   StopCircle,
   FileText,
-  Layers
+  Layers,
+  ChevronDown,
+  ChevronRight
 } from "react-feather";
 import Button from "../components/button";
 import { RunnerStatus } from "../../server/api/runner/status";
@@ -72,7 +75,7 @@ interface Props {
   onShowCoverage: () => void;
 }
 
-export default function TestExplorer({
+export default function TestExplorer ({
   selectedFile,
   workspace,
   onSelectedFileChange,
@@ -112,7 +115,20 @@ export default function TestExplorer({
     items
   );
 
-  if (showFailedTests) {
+  const onCollapseAll = () => {
+    const newCollapsedItems = {};
+    files.forEach(file => {
+      if (file.type === "directory" && file.parent) {
+        newCollapsedItems[file.path] = true;
+      }
+    });
+    setCollapsedItems(newCollapsedItems)
+  }
+  const onExpandAll = () => {
+    setCollapsedItems({})
+  }
+
+  if (showFailedTests && failedItems.length) {
     files = filterFailure(files);
   }
 
@@ -136,6 +152,16 @@ export default function TestExplorer({
   };
 
   const isRunning = runnerStatus && runnerStatus.running;
+  const keys = useKeys();
+  if (hasKeys(["Alt", "t"], keys)) {
+    run();
+  } else if (hasKeys(["Alt", "w"], keys)) {
+    if (runnerStatus) {
+      handleSetWatchModel(!runnerStatus.watching);
+    }
+  } else if (hasKeys(["Alt", "s"], keys)) {
+    onSearchOpen();
+  }
 
   return (
     <Container p={4} bg="veryDark" color="text">
@@ -203,21 +229,49 @@ export default function TestExplorer({
       <FileHeader mt={4} mb={3}>
         <FilesHeader>Tests</FilesHeader>
         <RightFilesAction>
-          <Tooltip title="Refresh files" position="bottom" size="small">
-            <Button
-              size="sm"
-              minimal
-              onClick={() => {
-                onRefreshFiles();
-              }}
+          {summary && summary.failedTests && summary.failedTests.length > 0 && (
+            <Tooltip
+              title="Show only failed tests"
+              position="top"
+              size="small"
             >
-              <RefreshCw size={10} />
-            </Button>
-          </Tooltip>
+              <Button
+                size="sm"
+                minimal={!showFailedTests}
+                onClick={() => {
+                  setShowFailedTests(!showFailedTests);
+                }}
+              >
+                <ZapOff size={10} />
+              </Button>
+            </Tooltip>
+          )}
+          {!showFailedTests && (
+            <Tooltip title="Collapse All Tests" position="top" size="small">
+              <Button
+                size="sm"
+                minimal
+                onClick={onCollapseAll}
+              >
+                <ChevronRight size={10} />
+              </Button>
+            </Tooltip>
+          )}
+          {!showFailedTests && (
+            <Tooltip title="Expand All Tests" position="top" size="small">
+              <Button
+                size="sm"
+                minimal
+                onClick={onExpandAll}
+              >
+                <ChevronDown size={10} />
+              </Button>
+            </Tooltip>
+          )}
           {summary && summary.haveCoverageReport && (
             <Tooltip
               title="Show coverage report"
-              position="bottom"
+              position="top"
               size="small"
             >
               <Button
@@ -231,23 +285,17 @@ export default function TestExplorer({
               </Button>
             </Tooltip>
           )}
-          {summary && summary.failedTests && summary.failedTests.length > 0 && (
-            <Tooltip
-              title="Show only failed tests"
-              position="bottom"
-              size="small"
+          <Tooltip title="Refresh files" position="top" size="small">
+            <Button
+              size="sm"
+              minimal
+              onClick={() => {
+                onRefreshFiles();
+              }}
             >
-              <Button
-                size="sm"
-                minimal
-                onClick={() => {
-                  setShowFailedTests(!showFailedTests);
-                }}
-              >
-                <ZapOff size={10} />
-              </Button>
-            </Tooltip>
-          )}
+              <RefreshCw size={10} />
+            </Button>
+          </Tooltip>
         </RightFilesAction>
       </FileHeader>
       <Tree

@@ -16,6 +16,7 @@ import { TestFileResult } from "../../server/api/workspace/test-result/file-resu
 import { TestFile as TestFileModel } from "../../server/api/workspace/test-file";
 import ConsolePanel from "./console-panel";
 import ErrorPanel from "./error-panel";
+import useKeys, { hasKeys } from "../hooks/use-keys";
 
 const Container = styled.div<any>`
   ${space};
@@ -27,6 +28,10 @@ const Container = styled.div<any>`
 const Content = styled.div`
   overflow: auto;
   height: calc(100vh - 118px);
+
+  ${({ dim }: any) => dim && `
+  opacity: .5;
+  `}
 `;
 
 const TestItemsContainer = styled.div`
@@ -88,18 +93,15 @@ function TestFile({ selectedFilePath, isRunning, projectRoot, onStop }: Props) {
     result => result.changeToResult
   );
 
-  const haveSnapshotFailures = ((result && result.testResults) || []).some(
-    testResult => {
-      return (testResult.failureMessages || []).some(failureMessage =>
-        failureMessage.includes("snapshot")
-      );
-    }
-  );
+  const isUpdating = isRunning && (result ===  null ||(result.numPassingTests === 0 && result.numFailingTests === 0));
 
   const roots = (fileItemResult.items || []).filter(
     item => item.parent === null
   );
-
+  const keys = useKeys();
+  if (hasKeys(["Alt", "Enter"], keys)) {
+    runFile();
+  }
   return (
     <Container p={5} bg="dark" color="text">
       <FileSummary
@@ -111,8 +113,8 @@ function TestFile({ selectedFilePath, isRunning, projectRoot, onStop }: Props) {
         failingTests={result && result.numFailingTests}
         path={selectedFilePath}
         isRunning={isRunning}
+        isUpdating={isUpdating}
         isLoadingResult={loading}
-        haveSnapshotFailures={haveSnapshotFailures}
         onRun={() => {
           runFile();
         }}
@@ -121,7 +123,7 @@ function TestFile({ selectedFilePath, isRunning, projectRoot, onStop }: Props) {
           updateSnapshot();
         }}
       />
-      <Content>
+      <Content dim={isUpdating}>
         {result && result.testResults && result.testResults.length === 0 && (
           <ErrorPanel failureMessage={result && result.failureMessage} />
         )}

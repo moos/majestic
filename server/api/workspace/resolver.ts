@@ -39,6 +39,13 @@ export default class WorkspaceResolver {
     const configResolver = new ConfigResolver();
     this.majesticConfig = configResolver.getConfig(root);
     this.results = new Results(root);
+    this.results.getCoverageReportPath(this.majesticConfig);
+
+    pubsub.publish("WorkspaceInitialized", {
+      coverageDirectory: this.results.coverageDirectory
+    });
+
+    this.results.checkIfCoverageReportExists();
 
     pubsub.subscribe(Events.TEST_RESULT, ({ payload }: any) => {
       const result = new TestFileResult();
@@ -77,7 +84,11 @@ export default class WorkspaceResolver {
 
     pubsub.subscribe(Events.RUN_COMPLETE, ({ payload }) => {
       this.results.mapCoverage(payload.coverageMap);
-      this.notifySummaryChange();
+
+      setTimeout(() => {
+        this.results.checkIfCoverageReportExists();
+        this.notifySummaryChange();
+      }, 2000);
     });
 
     pubsub.subscribe(RunnerEvents.RUNNER_STOPPED, () => {
@@ -144,7 +155,13 @@ export default class WorkspaceResolver {
   ): Promise<TestFileResult> {
     const payload = event.payload;
     const result = new TestFileResult();
-    if (event.id === Events.TEST_RESULT) {
+    if (event.id === Events.TEST_START) {
+      const existingResults = this.results.getResult(path);
+      if (existingResults) {
+        result.testResults =  existingResults.testResults;
+      }
+    }
+    else if (event.id === Events.TEST_RESULT) {
       result.path = path;
       result.failureMessage = payload.failureMessage;
       result.numPassingTests = payload.numPassingTests;

@@ -11,10 +11,12 @@ import {
   CheckCircle,
   Frown,
   ZapOff,
-  Circle
+  Circle,
+  Eye
 } from "react-feather";
 import Button from "../../components/button";
 import OPEN_IN_EDITOR from "./open-in-editor.gql";
+import OPEN_SNAP_IN_EDITOR from "./open-snap-in-editor.gql";
 import { Tooltip } from "react-tippy";
 import { useMutation } from "react-apollo-hooks";
 
@@ -27,6 +29,7 @@ const Container = styled.div<any>`
   justify-content: space-between;
   margin-bottom: 10px;
   overflow: hidden;
+  flex-wrap: wrap;
 `;
 
 const ContainerBG = styled(animated.div)`
@@ -81,6 +84,7 @@ const InfoLabel = styled.div`
 const FilePath = styled.div<any>`
   ${fontSize};
   ${space};
+  word-break: break-all;
   font-weight: 600;
   margin-right: 5px;
 `;
@@ -106,6 +110,7 @@ interface Props {
   passingTests: number;
   failingTests: number;
   isRunning: boolean;
+  isUpdating: boolean;
   isLoadingResult: boolean;
   onRun: () => void;
   onStop: () => void;
@@ -122,11 +127,11 @@ export default function FileSummary({
   passingTests,
   failingTests,
   isRunning,
+  isUpdating,
   isLoadingResult,
   onRun,
   onStop,
   onSnapshotUpdate,
-  haveSnapshotFailures
 }: Props) {
   const Icon = isRunning ? StopCircle : Play;
 
@@ -136,9 +141,15 @@ export default function FileSummary({
     }
   });
 
+  const openSnapshotInEditor = useMutation(OPEN_SNAP_IN_EDITOR, {
+    variables: {
+      path
+    }
+  });
+
   return (
     <Container p={4} bg="slightDark">
-      {(isRunning || isLoadingResult) && <ContainerBG />}
+      {( isUpdating || isLoadingResult) && <ContainerBG />}
       <RightContainer>
         <FilePath fontSize={15} mb={3}>
           {path.replace(projectRoot, "")}
@@ -187,9 +198,8 @@ export default function FileSummary({
             }}
           />
         </Tooltip>
-        {haveSnapshotFailures && (
           <Tooltip
-            title="Update all snapshots of the file"
+            title="Update all snapshots for this file"
             position="bottom"
             size="small"
           >
@@ -203,7 +213,15 @@ export default function FileSummary({
               Update Snapshot
             </Button>
           </Tooltip>
-        )}
+        <Tooltip title="Open snapshot in editor" size="small" position="bottom">
+          <Button
+            icon={<Eye size={14} />}
+            minimal
+            onClick={() => {
+              openSnapshotInEditor();
+            }}
+          />
+        </Tooltip>
       </ActionPanel>
     </Container>
   );

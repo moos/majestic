@@ -103,6 +103,7 @@ export default function App() {
         split="vertical"
         primary="second"
         pane1Style={{ minWidth: "300px" }}
+        pane2Style={{ maxWidth: "calc(100% - 300px)" }}
       >
         <Sidebar
           workspace={workspace}
@@ -121,8 +122,7 @@ export default function App() {
             stopRunner();
           }}
           onShowCoverage={() => {
-            setShowCoverage(!showCoverage);
-            handleFileSelection(null);
+            setShowCoverage(!showCoverage);            
           }}
         />
         {showCoverage && <CoveragePanel />}
